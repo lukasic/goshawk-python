@@ -1,6 +1,7 @@
 import pika
 import uuid
 import signal
+import threading
 
 class RabbitmqConsumer:
 
@@ -53,3 +54,27 @@ class RabbitmqConsumer:
     def stop_signal(self, signal):
         signal.signal(signal, self.stop)
 
+
+class WorkerPool:
+    def __init__(self, target, threads=4):
+        self.thr_list = dict()
+        self.is_running = True
+        self.threads_count = threads
+        self.target = target
+
+        signal.signal(signal.SIGINT, self.stop)
+        signal.signal(signal.SIGTERM, self.stop)
+
+    def stop(self):
+        print("Caught signal. Stopping workers...")
+        self.is_running = False
+
+    def start(self):
+        for i in range(self.threads_count):
+            print("Starting worker %d" % i)
+            self.thr_list[i] = threading.Thread(target=self.target, args={ i })
+            self.thr_list[i].start()
+
+    def join(self):
+        for i in self.thr_list.keys():
+            self.thr_list[i].join()
